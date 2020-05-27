@@ -8,14 +8,17 @@ from bs4 import BeautifulSoup#网页解析，获取数据
 import re  #正则表达式，进行文字匹配
 import urllib.request,urllib.error #指定url，获取网页数据
 import xlwt #进行excel操作
+import sqlite3 #进行数据库保存操作
 
 def main():
     baseurl = "https://movie.douban.com/top250?start="
     # 爬取网页
     askUrl(baseurl)
     datalist=getData(baseurl)
-    savepath="豆瓣电影Top250.xls"
-    saveData(datalist,savepath)
+    dbpath="movie.db"
+    # savepath="豆瓣电影Top250.xls"
+    # saveData(datalist,savepath)
+    saveData2DB(datalist,dbpath)
 
 
 #查找电影链接
@@ -118,5 +121,45 @@ def saveData(datalist,savepath):
     book.save(savepath)
 
 
+def saveData2DB(datalist,dbpath):
+    init_db(dbpath)
+    conn=sqlite3.connect(dbpath)
+    cur=conn.cursor()
+    for data in datalist:
+        for index in range(len(data)):
+            data[index]='"'+data[index]+'"'
+        sql='''
+            insert into movie250(info_link, pic_link, cname, oname, rate, judge, about, info)
+            values(%s)
+        '''%",".join(data)#join用法，将列表以逗号为分隔分开
+        cur.execute(sql)
+    cur.close()
+    conn.commit()
+    conn.close()
+
+def init_db(dbpath):
+    sql='''
+        create table movie250
+        (
+            id integer primary key autoincrement,
+            info_link text,
+            pic_link text,
+            cname varchar,
+            oname varchar,
+            rate int,
+            judge int,
+            about text,
+            info text
+        )
+    '''
+    conn = sqlite3.connect(dbpath)#创建链接数据库
+    cursor=conn.cursor()#进行游标操作
+    cursor.execute(sql)#执行数据库语句
+    conn.commit()#提交操作
+    conn.close()#关闭数据库
+
+
 if __name__ == '__main__':
     main()
+
+    print("执行完成")
